@@ -1,0 +1,35 @@
+
+TABLES : ekko.
+TYPE-POOLS: slis.
+*Structure declarations
+DATA : lt_ekko  TYPE TABLE OF ekko,
+       lt_ekpo  TYPE STANDARD TABLE OF ekpo,
+       lv_datum TYPE sy-datum,
+       it       TYPE TABLE OF ekpo.
+
+CONSTANTS : gc_plifz TYPE eplif VALUE  '100'.
+
+*PO's created within last 30days
+lv_datum = sy-datum - 30 .
+
+*Fetch data from PO based on creation date &
+SELECT * FROM ekko INTO TABLE @lt_ekko
+  WHERE aedat GE @lv_datum .
+IF sy-subrc EQ 0 .
+  SORT lt_ekko BY ebeln.
+  SELECT * FROM ekpo INTO TABLE @lt_ekpo
+    FOR ALL ENTRIES IN @lt_ekko
+    WHERE ebeln EQ @lt_ekko-ebeln
+    AND   plifz GE @gc_plifz.
+ENDIF.
+
+IF lt_ekpo IS NOT INITIAL.
+*  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+*    EXPORTING
+*      i_callback_program = sy-repid
+*      i_structure_name   = 'EKPO'
+*    TABLES
+*      t_outtab           = lt_ekpo.
+*ELSE.
+*  WRITE : 'No data exists'.
+ENDIF.
