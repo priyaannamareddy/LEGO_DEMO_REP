@@ -1,0 +1,57 @@
+*Data Declarations
+DATA :lo_http_client   TYPE REF TO if_http_client,
+      lt_header_fields TYPE tihttpnvp,
+      ls_header_fields TYPE ihttpnvp,
+      response         TYPE string,
+      lr_data          TYPE REF TO data.
+*Field symbols
+FIELD-SYMBOLS  : <lt_data> TYPE ANY TABLE,
+                 <lw_data> TYPE any.
+
+*& Setting up runtime info
+cl_salv_bs_runtime_info=>set(    EXPORTING display  = abap_false
+                                           metadata = abap_false
+                                           data     = abap_true ).
+*Submit calls to fecth data
+SUBMIT zr_po_details  AND RETURN.
+
+TRY.
+    cl_salv_bs_runtime_info=>get_data_ref( IMPORTING r_data = lr_data ).
+    ASSIGN lr_data->* TO <lt_data>.
+    BREAK-POINT.
+  CATCH cx_salv_bs_sc_runtime_info.
+    MESSAGE 'Unable to retrieve ALV data' TYPE 'E'.
+ENDTRY.
+cl_salv_bs_runtime_info=>clear_all( ).
+
+*& Move the output from other program to current program and update custom table
+LOOP AT <lt_data> ASSIGNING  <lw_data>.
+*Modify zmontortab from  <lw_data>.
+ENDLOOP.
+
+CALL METHOD cl_http_client=>create_by_url
+  EXPORTING
+    url                = '' " URL
+  IMPORTING
+    client             = lo_http_client
+  EXCEPTIONS
+    argument_not_found = 1
+    plugin_not_active  = 2
+    internal_error     = 3
+    OTHERS             = 4.
+IF sy-subrc <> 0.
+* Implement suitable error handling here
+ENDIF.
+
+lo_http_client->request->set_method('GET').
+
+*Adding header attributes
+ls_header_fields-name = 'Content-Type'.
+ls_header_fields-value = 'string'.
+APPEND ls_header_fields TO lt_header_fields.
+CLEAR : ls_header_fields.
+
+ls_header_fields-name = 'Accept'.
+ls_header_fields-name = 'application/json;charset=utf-8'.
+APPEND ls_header_fields TO lt_header_fields.
+CLEAR : ls_header_fields.
